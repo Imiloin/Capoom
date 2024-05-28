@@ -1,14 +1,17 @@
+import argparse
+import queue
 import signal
 import sys
-import whisper
-import soundcard as sc
+import textwrap
 import threading
-import queue
-import numpy as np
-import argparse
 import warnings
+
+import numpy as np
+import soundcard as sc
 from soundcard import SoundcardRuntimeWarning
 import tkinter as tk
+import tkinter.font
+import whisper
 
 
 
@@ -122,25 +125,59 @@ def create_subtitle_window():
     window = tk.Tk()
     window.overrideredirect(True)  # 移除窗口边框
     window.attributes("-alpha", 0.7)  # 设置窗口透明度
-    window.geometry("500x100+300+300")  # 设置窗口大小和位置
+    window.geometry("640x100+500+600")  # 设置窗口大小和位置
     window.configure(background="black")  # 设置窗口背景色
+    window.attributes('-topmost', 1)  # 窗口始终保持在最前面
+    
+    # 检查系统中是否安装了思源黑体
+    fonts = tkinter.font.families(window)
+    if "思源黑体 CN" in fonts:
+        font_name = "思源黑体 CN"
+    else:
+        font_name = "Microsoft YaHei"
 
-    label = tk.Label(window, text="", fg="white", bg="black", font=("Helvetica", 16))
+    label = tk.Label(window, text="", fg="white", bg="black", font=(font_name, 18), anchor='w', justify='left', width=80)
     label.pack()
 
-    return window, label
+    # 添加鼠标事件处理程序
+    def start_move(event):
+        window.x = event.x
+        window.y = event.y
+
+    def stop_move(event):
+        window.x = None
+        window.y = None
+
+    def do_move(event):
+        dx = event.x - window.x
+        dy = event.y - window.y
+        x = window.winfo_x() + dx
+        y = window.winfo_y() + dy
+        window.geometry(f"+{x}+{y}")
+
+    window.bind("<ButtonPress-1>", start_move)
+    window.bind("<ButtonRelease-1>", stop_move)
+    window.bind("<B1-Motion>", do_move)
+
+    return window, label, font_name
 
 
 def update_subtitle(label, subtitle_queue):
     try:
         text = subtitle_queue.get_nowait()
-        label.config(text=text)
+        lines = textwrap.wrap(text, width=26)  # 限制每行字符数
+        if len(lines) > 2:  # 如果行数大于2，缩小字体
+            label.config(font=(font_name, 16))
+        else:
+            label.config(font=(font_name, 18))
+        label.config(text='\n'.join(lines))
     except queue.Empty:
         pass
     label.after(100, update_subtitle, label, subtitle_queue)  # 每100毫秒更新一次字幕
 
+    
 
-window, label = create_subtitle_window()
+window, label, font_name = create_subtitle_window()
 subtitle_queue = queue.Queue()
 
 # 在主线程中启动字幕更新
