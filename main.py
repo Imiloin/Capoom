@@ -3,6 +3,7 @@ import queue
 import signal
 import sys
 import threading
+import time
 import warnings
 
 import numpy as np
@@ -10,6 +11,7 @@ import soundcard as sc
 from soundcard import SoundcardRuntimeWarning
 import tkinter as tk
 import tkinter.font
+from transformers import pipeline
 import whisper
 
 
@@ -24,7 +26,7 @@ warnings.filterwarnings("ignore", category=SoundcardRuntimeWarning)
 ################################################################################
 
 SAMPLE_RATE = 16000
-INTERVAL = 5
+INTERVAL = 2
 BUFFER_SIZE = 4096
 
 parser = argparse.ArgumentParser()
@@ -37,14 +39,14 @@ args = parser.parse_args()
 ################################################################################
 
 # options = whisper.DecodingOptions(task="translate")
-def recognize():
+def recognize(model):
     """
     This function is used to recognize audio and print the recognized text.
     """
     result = None
-    options = whisper.DecodingOptions()
+    options = whisper.DecodingOptions(without_timestamps=True)
     while True:
-        audio = audio_data.get()
+        audio = audio_queue.get()
         if (audio**2).max() > 0.001:
             audio = whisper.pad_or_trim(audio)
 
@@ -55,19 +57,67 @@ def recognize():
             _, probs = model.detect_language(mel)
             lang = max(probs, key=probs.get)
             if (not result or prev_lang != "zh") and lang == "zh":
-                options = whisper.DecodingOptions(prompt="我在说简体中文哦，")
+                options = whisper.DecodingOptions(prompt="我在说简体中文哦，", without_timestamps=True)
             prev_lang = lang
-
-            # options = whisper.DecodingOptions(task="transcribe", language='zh') # this kinda sucks
 
             # decode the audio
             result = whisper.decode(model, mel, options)
 
-            options = whisper.DecodingOptions(prompt=result.text)
-
             # print the recognized text
             print(f"{lang}: {result.text}")
-            subtitle_queue.put(result.text)
+            
+            
+            if lang == "zh":
+                subtitle_zh_queue.put(result.text)
+                options = whisper.DecodingOptions(task="translate", without_timestamps=True)
+                result1 = whisper.decode(model, mel, options)
+                subtitle_en_queue.put(result1.text)
+            elif lang == "en":
+                subtitle_en_queue.put(result.text)
+                tobetranslated_queue.put(result.text)
+            else:
+                # subtitle_zh_queue.put(result.text)  # just display the original text
+                options = whisper.DecodingOptions(task="translate", without_timestamps=True)
+                result1 = whisper.decode(model, mel, options)
+                subtitle_en_queue.put(result1.text)
+                tobetranslated_queue.put(result1.text)
+            
+            options = whisper.DecodingOptions(prompt=result.text, without_timestamps=True)
+
+
+def translate(translator):
+    """
+    This function is used to translate text from English to Chinese.
+    """
+    buffer = ""  # 创建一个缓冲区来存储短文本
+    while True:
+        try:
+            input_text = tobetranslated_queue.get_nowait()
+            if len(input_text) > 50:
+                input_text = input_text[:50] + " "
+        except queue.Empty:
+            # 如果队列为空，暂停一会儿再检查
+            time.sleep(0.1)
+            continue
+        
+        buffer += input_text
+        
+        if len(buffer) < 50:  # 设置阈值为50，或一句话没有结束
+            # print(buffer)
+            continue
+        elif buffer[-1] == "-":
+            buffer[-1] == " "
+            continue
+        elif buffer[-3:] == "...":
+            buffer = buffer[:-3] + " "
+            continue
+
+        # 翻译文本
+        res = translator(buffer, max_length=500)[0]['translation_text']
+        buffer = ""
+
+        # 将翻译结果放入另一个队列
+        subtitle_zh_queue.put(res)
 
 
 def record():
@@ -90,7 +140,7 @@ def record():
             m = n * 4 // 5
             vol = np.convolve(audio[m:n] ** 2, b, "same")
             m += vol.argmin()
-            audio_data.put(audio[:m])
+            audio_queue.put(audio[:m])
 
             audio_prev = audio
             audio = np.empty(SAMPLE_RATE * INTERVAL + BUFFER_SIZE, dtype=np.float32)
@@ -101,16 +151,24 @@ def record():
 # load the model
 print("Loading model...")
 model = whisper.load_model(args.model)
+translator = pipeline(task="translation", model="Helsinki-NLP/opus-mt-en-zh")
 print("Done")
 
 # initialize the queue and the filter
-audio_data = queue.Queue()
+audio_queue = queue.Queue()
 b = np.ones(100) / 100
 
 
-# start recording and recognizing audio in separate threads
-th_recognize = threading.Thread(target=recognize, daemon=True)
+subtitle_en_queue = queue.Queue()
+subtitle_zh_queue = queue.Queue()
+tobetranslated_queue = queue.Queue()
+
+
+# start recording, translating and recognizing audio in separate threads
+th_recognize = threading.Thread(target=recognize, args=(model,), daemon=True)
 th_recognize.start()
+th_translate = threading.Thread(target=translate, args=(translator,), daemon=True)
+th_translate.start()
 th_record = threading.Thread(target=record, daemon=True)
 th_record.start()
 
@@ -124,7 +182,7 @@ def create_subtitle_window():
     window = tk.Tk()
     window.overrideredirect(True)  # 移除窗口边框
     window.attributes("-alpha", 0.7)  # 设置窗口透明度
-    window.geometry("640x100+500+600")  # 设置窗口大小和位置
+    window.geometry("640x138+500+600")  # 设置窗口大小和位置
     window.configure(background="black")  # 设置窗口背景色
     window.attributes('-topmost', 1)  # 窗口始终保持在最前面
     
@@ -136,8 +194,10 @@ def create_subtitle_window():
         font_name = "Microsoft YaHei"
 
     # 创建 Text 控件
-    text_widget = tk.Text(window, fg="white", bg="black", font=(font_name, 18), width=80, wrap="word", selectbackground="black")
-    text_widget.pack()
+    text_en = tk.Text(window, fg="white", bg="black", font=(font_name, 16), width=80, height=2, wrap="word", selectbackground="black")
+    text_en.pack()
+    text_zh = tk.Text(window, fg="white", bg="black", font=(font_name, 18), width=80, height=2, wrap="word", selectbackground="black")
+    text_zh.pack()
 
     # 添加鼠标事件处理程序
     def start_move(event):
@@ -159,23 +219,26 @@ def create_subtitle_window():
     window.bind("<ButtonRelease-1>", stop_move)
     window.bind("<B1-Motion>", do_move)
 
-    return window, text_widget, font_name
+    return window, text_en, text_zh, font_name
 
 
-def update_subtitle(text_widget, subtitle_queue):
+def update_subtitle(text_en, text_zh, subtitle_en_queue, subtitle_zh_queue):
     try:
-        subtitle = subtitle_queue.get_nowait()
-        text_widget.delete(1.0, tk.END)  # 清空 Text 控件
-        text_widget.insert(tk.END, subtitle)  # 插入新的字幕
+        subtitle_en = subtitle_en_queue.get_nowait()
+        text_en.delete(1.0, tk.END)  # 清空 Text 控件
+        text_en.insert(tk.END, subtitle_en)  # 插入新的字幕
+        subtitle_zh = subtitle_zh_queue.get_nowait()
+        text_zh.delete(1.0, tk.END)
+        text_zh.insert(tk.END, subtitle_zh)
     except queue.Empty:
         pass
-    text_widget.after(100, update_subtitle, text_widget, subtitle_queue)  # 每100毫秒更新一次字幕
+    text_en.after(100, update_subtitle, text_en, text_zh, subtitle_en_queue, subtitle_zh_queue)  # 每100毫秒更新一次字幕
 
-window, label, font_name = create_subtitle_window()
-subtitle_queue = queue.Queue()
+window, text_en, text_zh, font_name = create_subtitle_window()
+
 
 # 在主线程中启动字幕更新
-update_subtitle(label, subtitle_queue)  
+update_subtitle(text_en, text_zh, subtitle_en_queue, subtitle_zh_queue)  
 
 
 
