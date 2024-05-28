@@ -2,7 +2,6 @@ import argparse
 import queue
 import signal
 import sys
-import textwrap
 import threading
 import warnings
 
@@ -136,8 +135,9 @@ def create_subtitle_window():
     else:
         font_name = "Microsoft YaHei"
 
-    label = tk.Label(window, text="", fg="white", bg="black", font=(font_name, 18), anchor='w', justify='left', width=80)
-    label.pack()
+    # 创建 Text 控件
+    text_widget = tk.Text(window, fg="white", bg="black", font=(font_name, 18), width=80, wrap="word", selectbackground="black")
+    text_widget.pack()
 
     # 添加鼠标事件处理程序
     def start_move(event):
@@ -159,23 +159,17 @@ def create_subtitle_window():
     window.bind("<ButtonRelease-1>", stop_move)
     window.bind("<B1-Motion>", do_move)
 
-    return window, label, font_name
+    return window, text_widget, font_name
 
 
-def update_subtitle(label, subtitle_queue):
+def update_subtitle(text_widget, subtitle_queue):
     try:
-        text = subtitle_queue.get_nowait()
-        lines = textwrap.wrap(text, width=26)  # 限制每行字符数
-        if len(lines) > 2:  # 如果行数大于2，缩小字体
-            label.config(font=(font_name, 16))
-        else:
-            label.config(font=(font_name, 18))
-        label.config(text='\n'.join(lines))
+        subtitle = subtitle_queue.get_nowait()
+        text_widget.delete(1.0, tk.END)  # 清空 Text 控件
+        text_widget.insert(tk.END, subtitle)  # 插入新的字幕
     except queue.Empty:
         pass
-    label.after(100, update_subtitle, label, subtitle_queue)  # 每100毫秒更新一次字幕
-
-    
+    text_widget.after(100, update_subtitle, text_widget, subtitle_queue)  # 每100毫秒更新一次字幕
 
 window, label, font_name = create_subtitle_window()
 subtitle_queue = queue.Queue()
