@@ -4,6 +4,14 @@ import time
 import whisper
 
 
+ENABLE_TRANSLATION = True
+
+
+def set_enable_translation(value):
+    global ENABLE_TRANSLATION
+    ENABLE_TRANSLATION = value
+
+
 def recognize(
     model, audio_queue, subtitle_zh_queue, subtitle_en_queue, tobetranslated_queue
 ):
@@ -34,25 +42,30 @@ def recognize(
 
             # print the recognized text
             print(f"{lang}: {result.text}")
+            
+            result_text = result.text if len(result.text) < 100 else result.text[:100] + "..."
 
-            if lang == "zh":
-                subtitle_zh_queue.put(result.text)
-                options = whisper.DecodingOptions(
-                    task="translate", without_timestamps=True
-                )
-                result1 = whisper.decode(model, mel, options)
-                subtitle_en_queue.put(result1.text)
-            elif lang == "en":
-                subtitle_en_queue.put(result.text)
-                tobetranslated_queue.put(result.text)
+            if ENABLE_TRANSLATION:
+                if lang == "zh":
+                    subtitle_zh_queue.put(result_text)
+                    options = whisper.DecodingOptions(
+                        task="translate", without_timestamps=True
+                    )
+                    result1 = whisper.decode(model, mel, options)
+                    subtitle_en_queue.put(result1.text)
+                elif lang == "en":
+                    subtitle_en_queue.put(result_text)
+                    tobetranslated_queue.put(result_text)
+                else:
+                    # subtitle_zh_queue.put(result.text)  # just display the original text
+                    options = whisper.DecodingOptions(
+                        task="translate", without_timestamps=True
+                    )
+                    result1 = whisper.decode(model, mel, options)
+                    subtitle_en_queue.put(result1.text)
+                    tobetranslated_queue.put(result1.text)
             else:
-                # subtitle_zh_queue.put(result.text)  # just display the original text
-                options = whisper.DecodingOptions(
-                    task="translate", without_timestamps=True
-                )
-                result1 = whisper.decode(model, mel, options)
-                subtitle_en_queue.put(result1.text)
-                tobetranslated_queue.put(result1.text)
+                subtitle_en_queue.put(result_text)
 
             options = whisper.DecodingOptions(
                 prompt=result.text, without_timestamps=True

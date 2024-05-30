@@ -5,6 +5,7 @@ import sys
 import threading
 import warnings
 
+import gradio as gr
 import numpy as np
 import soundcard as sc
 from soundcard import SoundcardRuntimeWarning
@@ -12,7 +13,7 @@ from transformers import pipeline
 import whisper
 
 from gui import create_subtitle_window, update_subtitle
-from subtitles import recognize, translate
+from subtitles import recognize, translate, set_enable_translation
 
 
 # 忽略 SoundcardRuntimeWarning 类型的警告
@@ -30,6 +31,65 @@ BUFFER_SIZE = 4096
 parser = argparse.ArgumentParser()
 parser.add_argument("--model", default="medium")
 args = parser.parse_args()
+
+################################################################################
+# Gradio control panel
+################################################################################
+
+
+def updateprams(interval, buffer_size):
+    global INTERVAL, BUFFER_SIZE
+    INTERVAL = interval
+    BUFFER_SIZE = buffer_size
+    print(f"Interval: {INTERVAL}, Buffer Size: {BUFFER_SIZE}")
+
+
+def enable_translation_checkbox(enable_translation):
+    global window, text_en, text_zh, font_name
+
+    set_enable_translation(enable_translation)
+    if enable_translation:
+        window.geometry("640x138")
+        text_zh.pack()
+        print("Translation enabled")
+    else:
+        text_zh.pack_forget()
+        window.geometry("640x64")
+        print("Translation disabled")
+
+
+with gr.Blocks() as webui:
+    gr.Markdown("# Capoom Control Panel")
+    with gr.Row():
+        with gr.Column(scale=3):
+            interval = gr.Slider(
+                minimum=1,
+                maximum=10,
+                step=1,
+                value=2,
+                label="Interval",
+                info="seconds per recognition",
+            )
+            buffer_size = gr.Slider(
+                minimum=1024,
+                maximum=16384,
+                step=1024,
+                value=4096,
+                label="Buffer Size",
+                info="number of samples per recording",
+            )
+            apply_btn = gr.Button("Apply")
+        with gr.Column(scale=1):
+            enable_translation = gr.Checkbox(value=True, label="Enable Translation")
+
+    apply_btn.click(updateprams, inputs=[interval, buffer_size], outputs=None)
+    enable_translation.change(
+        enable_translation_checkbox, inputs=[enable_translation], outputs=None
+    )
+
+
+def launch_gradio():
+    webui.launch()
 
 
 ################################################################################
@@ -51,6 +111,8 @@ def record():
         while True:
             while buffer_end < SAMPLE_RATE * INTERVAL:
                 data = mic.record(BUFFER_SIZE)
+                if buffer_end + len(data) > len(audio):
+                    break
                 audio[buffer_end : buffer_end + len(data)] = data.reshape(-1)
                 buffer_end += len(data)
 
@@ -75,8 +137,9 @@ def record():
 # load the model
 print("Loading model...")
 model = whisper.load_model(args.model)
+print(f"Whisper {args.model} model loaded")
 translator = pipeline(task="translation", model="Helsinki-NLP/opus-mt-en-zh")
-print("Done")
+print("Helsinki-NLP opus-mt-en-zh model loaded")
 
 # initialize the queue and the filter
 audio_queue = queue.Queue()
@@ -108,6 +171,8 @@ th_translate = threading.Thread(
 th_translate.start()
 th_record = threading.Thread(target=record, daemon=True)
 th_record.start()
+th_gradio = threading.Thread(target=launch_gradio, daemon=True)
+th_gradio.start()
 
 
 ################################################################################
