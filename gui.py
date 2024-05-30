@@ -3,16 +3,14 @@ import tkinter as tk
 import tkinter.font
 
 
-
-
 def create_subtitle_window():
     window = tk.Tk()
     window.overrideredirect(True)  # 移除窗口边框
     window.attributes("-alpha", 0.7)  # 设置窗口透明度
     window.geometry("640x138+500+600")  # 设置窗口大小和位置
     window.configure(background="black")  # 设置窗口背景色
-    window.attributes('-topmost', 1)  # 窗口始终保持在最前面
-    
+    window.attributes("-topmost", 1)  # 窗口始终保持在最前面
+
     # 检查系统中是否安装了思源黑体
     fonts = tkinter.font.families(window)
     if "思源黑体 CN" in fonts:
@@ -21,9 +19,27 @@ def create_subtitle_window():
         font_name = "Microsoft YaHei"
 
     # 创建 Text 控件
-    text_en = tk.Text(window, fg="white", bg="black", font=(font_name, 16), width=80, height=2, wrap="word", selectbackground="black")
+    text_en = tk.Text(
+        window,
+        fg="white",
+        bg="black",
+        font=(font_name, 16),
+        width=80,
+        height=2,
+        wrap="word",
+        selectbackground="black",
+    )
     text_en.pack()
-    text_zh = tk.Text(window, fg="white", bg="black", font=(font_name, 18), width=80, height=2, wrap="word", selectbackground="black")
+    text_zh = tk.Text(
+        window,
+        fg="white",
+        bg="black",
+        font=(font_name, 18),
+        width=80,
+        height=2,
+        wrap="word",
+        selectbackground="black",
+    )
     text_zh.pack()
 
     # 添加鼠标事件处理程序
@@ -59,4 +75,6 @@ def update_subtitle(text_en, text_zh, subtitle_en_queue, subtitle_zh_queue):
         text_zh.insert(tk.END, subtitle_zh)
     except queue.Empty:
         pass
-    text_en.after(100, update_subtitle, text_en, text_zh, subtitle_en_queue, subtitle_zh_queue)  # 每100毫秒更新一次字幕
+    text_en.after(
+        100, update_subtitle, text_en, text_zh, subtitle_en_queue, subtitle_zh_queue
+    )  # 每100毫秒更新一次字幕

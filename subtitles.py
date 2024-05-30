@@ -4,9 +4,9 @@ import time
 import whisper
 
 
-
-
-def recognize(model, audio_queue, subtitle_zh_queue, subtitle_en_queue, tobetranslated_queue):
+def recognize(
+    model, audio_queue, subtitle_zh_queue, subtitle_en_queue, tobetranslated_queue
+):
     """
     This function is used to recognize audio and print the recognized text.
     """

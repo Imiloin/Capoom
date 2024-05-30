@@ -15,10 +15,8 @@ from gui import create_subtitle_window, update_subtitle
 from subtitles import recognize, translate
 
 
-
 # 忽略 SoundcardRuntimeWarning 类型的警告
 warnings.filterwarnings("ignore", category=SoundcardRuntimeWarning)
-
 
 
 ################################################################################
@@ -37,6 +35,7 @@ args = parser.parse_args()
 ################################################################################
 # Functions
 ################################################################################
+
 
 def record():
     """
@@ -57,7 +56,9 @@ def record():
 
             # find silent periods
             silence_start = buffer_end * 4 // 5
-            vol = np.convolve(audio[silence_start:buffer_end] ** 2, smoothing_filter, "same")
+            vol = np.convolve(
+                audio[silence_start:buffer_end] ** 2, smoothing_filter, "same"
+            )
             silence_start += vol.argmin()
             audio_queue.put(audio[:silence_start])
 
@@ -87,9 +88,23 @@ tobetranslated_queue = queue.Queue()
 
 
 # start recording, translating and recognizing audio in separate threads
-th_recognize = threading.Thread(target=recognize, args=(model, audio_queue, subtitle_zh_queue, subtitle_en_queue, tobetranslated_queue), daemon=True)
+th_recognize = threading.Thread(
+    target=recognize,
+    args=(
+        model,
+        audio_queue,
+        subtitle_zh_queue,
+        subtitle_en_queue,
+        tobetranslated_queue,
+    ),
+    daemon=True,
+)
 th_recognize.start()
-th_translate = threading.Thread(target=translate, args=(translator, tobetranslated_queue, subtitle_zh_queue), daemon=True)
+th_translate = threading.Thread(
+    target=translate,
+    args=(translator, tobetranslated_queue, subtitle_zh_queue),
+    daemon=True,
+)
 th_translate.start()
 th_record = threading.Thread(target=record, daemon=True)
 th_record.start()
@@ -103,9 +118,7 @@ window, text_en, text_zh, font_name = create_subtitle_window()
 
 
 # 在主线程中启动字幕更新
-update_subtitle(text_en, text_zh, subtitle_en_queue, subtitle_zh_queue)  
-
-
+update_subtitle(text_en, text_zh, subtitle_en_queue, subtitle_zh_queue)
 
 
 # Use Ctrl+C to quit the program
