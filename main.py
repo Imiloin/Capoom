@@ -58,6 +58,11 @@ def enable_translation_checkbox(enable_translation):
         print("Translation disabled")
 
 
+def set_opacity(value):
+    window.attributes("-alpha", value)
+    print(f"Window opacity: {value}")
+
+
 with gr.Blocks() as webui:
     gr.Markdown("# Capoom Control Panel")
     with gr.Row():
@@ -81,11 +86,20 @@ with gr.Blocks() as webui:
             apply_btn = gr.Button("Apply")
         with gr.Column(scale=1):
             enable_translation = gr.Checkbox(value=True, label="Enable Translation")
+            opacity = gr.Slider(
+                minimum=0.01,
+                maximum=1.0,
+                step=0.01,
+                value=0.7,
+                label="Window Opacity",
+                info="opacity of the control panel",
+            )
 
     apply_btn.click(updateprams, inputs=[interval, buffer_size], outputs=None)
     enable_translation.change(
         enable_translation_checkbox, inputs=[enable_translation], outputs=None
     )
+    opacity.change(set_opacity, inputs=[opacity], outputs=None)
 
 
 def launch_gradio():
