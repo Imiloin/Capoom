@@ -1,7 +1,12 @@
 # --extra-index-url https://download.pytorch.org/whl/cu118
 # torch
 
+# numba
+# tqdm
+# more-itertools
+# tiktoken
 # git+https://github.com/openai/whisper.git
+
 gradio
 numpy
 soundcard
@@ -9,4 +14,5 @@ soundcard
 transformers
 sentencepiece
 
+# optional
 sacremoses

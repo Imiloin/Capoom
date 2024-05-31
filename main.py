@@ -92,7 +92,7 @@ with gr.Blocks() as webui:
                 step=0.01,
                 value=0.7,
                 label="Window Opacity",
-                info="opacity of the control panel",
+                info="opacity of the subtitle window",
             )
 
     apply_btn.click(updateprams, inputs=[interval, buffer_size], outputs=None)

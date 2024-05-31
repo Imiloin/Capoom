@@ -11,10 +11,11 @@ def create_subtitle_window():
     window.configure(background="black")  # 设置窗口背景色
     window.attributes("-topmost", 1)  # 窗口始终保持在最前面
 
-    # 检查系统中是否安装了思源黑体
+    # 检查系统中是否安装了 Noto Sans 字体
     fonts = tkinter.font.families(window)
-    if "思源黑体 CN" in fonts:
-        font_name = "思源黑体 CN"
+    if "Go Noto Kurrent-Regular" in fonts:
+        font_name = "Go Noto Kurrent-Regular"
+        print("Noto Kurrent font found.")
     else:
         font_name = "Microsoft YaHei"
 
