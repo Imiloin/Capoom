@@ -4,7 +4,7 @@
 
 <img src="README.assets/demo.png" alt="demo" style="zoom: 67%;" />
 
-语音识别功能基于 OpenAI 的 [Whisper](https://github.com/openai/whisper) 模型实现，可以完成高质量的语音转文字任务，同时可以实现多语言向英语的翻译。英译中翻译功能使用了 [Helsinki-NLP](https://huggingface.co/Helsinki-NLP/opus-mt-en-zh) 的中英翻译模型。音频的录制使用了 `soundcard` 库。
+语音识别功能基于 OpenAI 的 [Whisper](https://github.com/openai/whisper) 模型实现，可以完成高质量的语音转文字任务，同时可以实现多语言向英语的翻译。英译中翻译功能使用了 [Helsinki-NLP](https://huggingface.co/Helsinki-NLP/opus-mt-en-zh) 的英译中模型。音频的录制使用了 `soundcard` 库。
 
 
 
@@ -22,9 +22,9 @@ Windows 10/11 系统，至少 4GB 显存的 Nvidia 独立显卡。
 
 首先应确保安装了 [CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit) 及相应的 Nvidia 显卡驱动。
 
-（可选）安装 [GoNotoKurrent](https://github.com/satbyy/go-noto-universal/releases) 字体用于字幕显示。
+（可选）安装 [GoNotoKurrent](https://github.com/satbyy/go-noto-universal/releases) 字体用于字幕显示，未安装则使用微软雅黑字体。
 
-克隆本仓库
+克隆本仓库：
 
 ```shell
 git clone https://github.com/Imiloin/Capoom.git
@@ -43,18 +43,18 @@ conda activate capoom
 ```shell
 # change the CUDA version to the one you have
 conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
-# or
+# or use pip to install
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 ```
 
-安装 `Whisper`
+安装 `Whisper` ：
 
 ```shell
 pip install numba tqdm more-itertools tiktoken
 pip install --upgrade --no-deps --force-reinstall git+https://github.com/openai/whisper.git
 ```
 
-安装其他依赖
+安装其他依赖：
 
 ```shell
 pip install -r requirements.txt
@@ -64,7 +64,7 @@ pip install -r requirements.txt
 
 ## Usage
 
-运行 `main.py`
+运行 `main.py` 即可。
 
 ```shell
 python main.py --model medium
