@@ -6,17 +6,11 @@
 
 语音识别功能基于 OpenAI 的 [Whisper](https://github.com/openai/whisper) 模型实现，可以完成高质量的语音转文字任务，同时可以实现多语言向英语的翻译。英译中翻译功能使用了 [Helsinki-NLP](https://huggingface.co/Helsinki-NLP/opus-mt-en-zh) 的英译中模型。音频的录制使用了 `soundcard` 库。
 
-
-
-
 ## System Requirements
 
 Windows 10/11 系统，至少 4GB 显存的 Nvidia 独立显卡。
 
 （推荐）安装 [Anaconda](https://www.anaconda.com/download) 和 [FFmpeg](https://ffmpeg.org/)，并配置环境变量。
-
-
-
 
 ## Setup
 
@@ -60,8 +54,6 @@ pip install --upgrade --no-deps --force-reinstall git+https://github.com/openai/
 pip install -r requirements.txt
 ```
 
-
-
 ## Usage
 
 运行 `main.py` 即可。
@@ -69,6 +61,7 @@ pip install -r requirements.txt
 ```shell
 python main.py --model medium
 ```
+
 默认使用 `medium` 模型，如果显存不足，可以尝试使用 `small` 模型。`tiny` 模型的效果较差。
 
 第一次运行可能需要下载模型，请耐心等待，或尝试更换网络环境。
@@ -76,26 +69,26 @@ python main.py --model medium
 
 如果运行成功，应当会在屏幕上显示一个半透明的黑色窗口，用于显示字幕。
 
-在浏览器中打开 http://127.0.0.1:7860/ ，可以看到一个简单的控制面板，用于调整部分参数和控制翻译的开关。
+在浏览器中打开 <http://127.0.0.1:7860/> ，可以看到一个简单的控制面板，用于调整部分参数和控制翻译的开关。
 <img src="README.assets/control_panel.png" alt="control_panel" style="zoom: 50%;" />
 
 `Interval` 参数决定了每次识别的时间间隔，单位是秒，默认值为 2。较大的数值可以取得更好的识别效果，但会增加延迟。
 
 `Buffer Size` 参数决定了每次录制的音频数据的样本数量，默认值为 4096。较大的数值可以录制更长的音频提高完整性，但会增加少量延迟和内存占用。
 
-`Enable Translation` 开关用于控制是否开启翻译功能，默认开启。在开启状态下，无论当前语音的使用的是什么语言，都会尝试将其翻译为中英双语。在关闭状态下，字幕显示会变为一栏，直接按当前语言显示识别的文本。
+`Enable Translation` 开关用于控制是否开启翻译功能，默认开启。在开启状态下，无论当前语音使用的是什么语言，都会尝试将其翻译为中英双语。在关闭状态下，字幕显示会变为一栏，直接按当前语言显示识别的文本。
 
-`opacity` 为字幕窗口的不透明度，取值范围为 0~1，默认值为 0.7。可以适当调整以适应不同的背景。
+`Window Opacity` 为字幕窗口的不透明度，取值范围为 0~1，默认值为 0.7。可以适当调整以适应不同的背景。
 
-
-
+> [!NOTE]  
+> 启用翻译时，中英双语字幕可能不完全同步。
 
 ## References
 
-[1] https://github.com/TadaoYamaoka/LoopbackWhisper
+\[1\] <https://github.com/TadaoYamaoka/LoopbackWhisper>
 
-[2] https://github.com/openai/whisper
+\[2\] <https://github.com/openai/whisper>
 
-[3] https://huggingface.co/Helsinki-NLP/opus-mt-en-zh
+\[3\] <https://huggingface.co/Helsinki-NLP/opus-mt-en-zh>
 
-[4] https://github.com/gradio-app/gradio/issues/3271#issuecomment-1440455811
+\[4\] <https://github.com/gradio-app/gradio/issues/3271#issuecomment-1440455811>
